@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from itertools import combinations
 import numpy as np
 import math
+from collections import Counter
 
 
 def split_df(df):
@@ -19,11 +20,29 @@ def dist(a, b):
 
 
 def percent_mistakes(subject, example):
-    return 1.0
+    count = 0
+    for (srow, erow) in zip(subject.sort_values("Id").iterrows(), example.sort_values("Id").iterrows()):
+        srow = dict(srow[1])
+        erow = dict(erow[1])
+        if srow['Class'] != erow['Class']:
+            count += 1
+    return count / len(example)
 
+def most_common(lst):
+    data = Counter(lst)
+    return data.most_common(1)[0][0]
 
-def classify_and_add(row, df):
-    df
+def classify_and_add(row, df, k, columns):
+    row = dict(row[1])
+    class_name = "Class"
+    p = (row[columns[0]], row[columns[1]])
+    df['dist'] = df.apply(lambda r: dist(p, (r.A, r.B)), axis=1)
+    sorted_df = df.sort_values('dist').head(k)
+    classified = sorted_df['Class'].to_numpy()
+    row['Class'] = most_common(classified)
+    new_row = pd.DataFrame(row, index=[0])
+    return pd.concat([df, new_row])
+
 
 
 def main():
@@ -31,20 +50,21 @@ def main():
     df = pd.read_csv('resources/iris.csv', header='infer')
 
     property_df = df.loc[:, df.columns != class_name]
-    # project_axis(df, range(1, len(property_df.columns)))
+    project_axis(df, range(1, len(property_df.columns)))
 
     normalized_df = (property_df - property_df.min()) / (property_df.max() - property_df.min())
-    # project_axis(df, range(1, len(property_df.columns)))
+    project_axis(df, range(1, len(property_df.columns)))
     normalized_df = normalized_df.join(df[class_name])
-    subject, example = split_df(normalized_df)
     start_k = int(math.sqrt(len(df.index)))
     k_map = {}
 
     clean_df = pd.read_csv('resources/iris.csv', header='infer')
-    for k in range(start_k, 1):
-        for row in subject:
-            classify_and_add(row, example, k, columns) # todo implement
-        k_map[k] = percent_mistakes(example, clean_df) # todo implement
+    normalized_df["Id"] = clean_df["Id"]
+    subject, example = split_df(normalized_df)
+    for k in range(start_k, 1, -1):
+        for row in subject.iterrows():
+            example = classify_and_add(row, example, k, ['A', 'B'])  # todo implement
+        k_map[k] = percent_mistakes(example, clean_df)  # todo implement
 
     print(k_map)
     # p = (rnd.uniform(0, 1), rnd.uniform(0, 1))
