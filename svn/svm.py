@@ -20,7 +20,7 @@ X, y = make_classification(n_samples=2000, n_features=2,
 X_train, X_test, y_train, y_test = train_test_split(X, y,
                                                     test_size=0.3, stratify=y,
                                                     random_state=32)
-clf = SVC(kernel='linear', random_state=32)
+clf = SVC(kernel='linear')
 clf.fit(X_train, y_train)
 
 x = X_train[:, 0]
